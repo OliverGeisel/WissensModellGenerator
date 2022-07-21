@@ -5,23 +5,36 @@ import re
 import PySimpleGUI as gui
 
 
-def new_knowlege_element(number: int) -> gui.Frame:
+def new_knowledge_element(number: int) -> gui.Frame:
     layout = [
         [gui.Text("TYP:"),
-         gui.DropDown(["Term", "Definition", "Synonym", "Fact", "Acronym"], "Term", key=f"element-{number}-type")],
-        [gui.Text("Name:"), gui.Input("", key=f"element-{number}-name")],
-        [gui.Text("Inhalt:"), gui.Input("", key=f"element-{number}-content")],
-        [gui.Frame("Relations", [[gui.Input("", key=f"element-{number}-relation-1")]],
+         gui.DropDown(["Term", "Definition", "Fact", ], "Term", key=f"element-{number}-type")],
+        [gui.Text("Name/ID:", tooltip="Die ID setzt sich aus dem Input und der ID zusammen"),
+         gui.Input("", key=f"element-{number}-name", tooltip="Die ID setzt sich aus dem Input und der ID zusammen")],
+        [gui.Text("Inhalt:"), gui.Multiline("", key=f"element-{number}-content", size=(35, 3))],
+        [gui.Frame("Relations",
+                   [[gui.Combo(["is-Acronym", "is-Synonym", "has", "is"], "", key=f"element-{number}-relation_type-1"),
+                     gui.Input("", key=f"element-{number}-relation-1")]],
                    key=f"Frame-{number}-relations")],
         [gui.Button("Weitere Relation", key=f"new-relation-{number}")]]
     return gui.Frame("", layout=layout, key=f"Frame-element-{number}")
 
 
 def create_knowledge_window() -> gui.Window:
-    layout = [[gui.Frame("Elemente", [[new_knowlege_element(1)]], key="Frame-elements")],
+    layout = [[gui.Frame("Elemente", [[new_knowledge_element(1)]], key="Frame-elements")],
               [gui.Button("Neues Element", key="new-element"), gui.Input("", key="output-name"),
                gui.Button("Speichern", key="save")]]
     return gui.Window("Neues Wissen", layout)
+
+
+def create_relations(keys: list, values: dict) -> list:
+    back = []
+    count = 0
+    while count < len(keys):
+        if "" not in [values[keys[count]], values[keys[count + 1]]]:
+            back.append({"relation_id": values[keys[count]], "relation_type": values[keys[count + 1]]})
+        count += 2
+    return back
 
 
 def save(values: dict[str, str]):
@@ -35,10 +48,11 @@ def save(values: dict[str, str]):
         element_groups[number].append(key)
 
     for group, keys in element_groups.items():
-        element = {"type": values[keys[0]],
-                   "id": values[keys[1]],
+        element = {"type": values[keys[0]].upper(),
+                   "id": f"{values[keys[1]]}-{values[keys[0]].upper()}",
                    "content": values[keys[2]],
-                   "relations": [values[rel] for rel in keys[3:]]
+                   "relations":
+                       create_relations(keys[3:], values)
                    }
         elements.append(element)
     file_str = json.dumps(elements)
@@ -74,7 +88,7 @@ def run_new_knowledge(window: gui.Window):
         if event == "new-element":
             frame = window.find_element("Frame-elements")
             number = len(frame.widget.children)
-            window.extend_layout(frame, [[new_knowlege_element(number + 1)]])
+            window.extend_layout(frame, [[new_knowledge_element(number + 1)]])
         if event == "save":
             save(values)
             window.disable()
