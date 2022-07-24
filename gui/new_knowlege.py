@@ -23,7 +23,8 @@ def new_knowledge_element(number: int) -> gui.Frame:
 def create_knowledge_window() -> gui.Window:
     layout = [[gui.Frame("Elemente", [[new_knowledge_element(1)]], key="Frame-elements")],
               [gui.Button("Neues Element", key="new-element"), gui.Input("", key="output-name"),
-               gui.Button("Speichern", key="save")]]
+               gui.Button("Speichern", key="save"), gui.Button("Neuer Wissenssatz", key="new-knowledge-set",
+                                                               tooltip="Neues leres Fenster um neuen Wissenssatz zu erstellen.")]]
     return gui.Window("Neues Wissen", layout)
 
 
@@ -60,6 +61,8 @@ def save(values: dict[str, str]):
     with open(path, "r") as config:
         output_path_base = pathlib.Path(json.loads(config.read())["path-to-output"])
     output_file_path = output_path_base.joinpath(f"{values['output-name']}.json")
+    if output_file_path.name == ".json":
+        output_file_path = output_path_base.joinpath("knowledge.json")
     count = 1
     if not output_path_base.exists():
         output_path_base.mkdir(parents=True)
@@ -79,18 +82,51 @@ def run_new_knowledge(window: gui.Window):
     while True:
         event, values = window.read()
         if event in [gui.WIN_X_EVENT, gui.WIN_CLOSED]:
-            break
-        if re.match(r"new-relation-\d+", event):
+            window.disable()
+            answer, _ = gui.Window('Neues Wissensset?', [[gui.T('Soll das bestehende Wissen gespeichert werden?')],
+                                                         [gui.Yes(s=10), gui.No(s=10), gui.Cancel(s=10)]],
+                                   disable_close=True).read(close=True)
+            if answer == "Yes":
+                save(values)
+                gui.popup_ok("Datei wurde gespeichert!")
+                window.close()
+                break
+            elif answer == "No":
+                window.close()
+                break
+            else:
+                window.enable()
+        elif re.match(r"new-relation-\d+", event):
             number = int(event.split('-')[2])
             frame: gui.Frame = window.find_element(f"Frame-{number}-relations")
             relation_number = len(frame.widget.children) + 1
             window.extend_layout(frame, [[gui.Input("", key=f"relation-{number}-{relation_number}")]])
-        if event == "new-element":
+        elif event == "new-element":
             frame = window.find_element("Frame-elements")
             number = len(frame.widget.children)
             window.extend_layout(frame, [[new_knowledge_element(number + 1)]])
-        if event == "save":
+        elif event == "save":
             save(values)
             window.disable()
             gui.popup_ok("Datei wurde gespeichert!")
             window.enable()
+        elif event == "new-knowledge-set":
+            # answer = gui.popup("Soll die aktuelle datei gespeichert werden?")
+            window.disable()
+            answer,_ = gui.Window('Neues Wissensset?', [[gui.T('Soll das bestehende Wissen gespeichert werden?')],
+                                                      [gui.Yes(s=10), gui.No(s=10), gui.Cancel(s=10)]],
+                                disable_close=True).read(close=True)
+            window.enable()
+            if answer == "Yes":
+                save(values)
+                window.close()
+                gui.popup_ok("Datei wurde gespeichert!")
+                window = create_knowledge_window()
+            elif answer == "No":
+                window.close()
+                window = create_knowledge_window()
+            else:
+                pass
+        else:
+            print("Unbekanntes Event! Abbruch")
+            window.close()
