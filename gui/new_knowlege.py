@@ -24,7 +24,7 @@ def create_knowledge_window() -> gui.Window:
     layout = [[gui.Frame("Elemente", [[new_knowledge_element(1)]], key="Frame-elements")],
               [gui.Button("Neues Element", key="new-element"), gui.Input("", key="output-name"),
                gui.Button("Speichern", key="save"), gui.Button("Neuer Wissenssatz", key="new-knowledge-set",
-                                                               tooltip="Neues leres Fenster um neuen Wissenssatz zu erstellen.")]]
+                                                     tooltip="Neues leres Fenster um neuen Wissenssatz zu erstellen.")]]
     return gui.Window("Neues Wissen", layout)
 
 
@@ -38,6 +38,10 @@ def create_relations(keys: list, values: dict) -> list:
     return back
 
 
+class IDException(Exception):
+    pass
+
+
 def save(values: dict[str, str]):
     elements = []
     elem_key = [key for key in values if key.startswith("element")]
@@ -49,6 +53,9 @@ def save(values: dict[str, str]):
         element_groups[number].append(key)
 
     for group, keys in element_groups.items():
+        if values[keys[1]] == "":
+            gui.popup_error(f"Element {group} hat keine ID. Bitte angeben", title="Fehlende ID")
+            raise IDException
         element = {"type": values[keys[0]].upper(),
                    "id": f"{values[keys[1]]}-{values[keys[0]].upper()}",
                    "content": values[keys[2]],
@@ -87,15 +94,18 @@ def run_new_knowledge(window: gui.Window):
                                                          [gui.Yes(s=10), gui.No(s=10), gui.Cancel(s=10)]],
                                    disable_close=True).read(close=True)
             if answer == "Yes":
-                save(values)
+                try:
+                    save(values)
+                except IDException:
+                    window.enable()
+                    continue
                 gui.popup_ok("Datei wurde gespeichert!")
                 window.close()
                 break
             elif answer == "No":
                 window.close()
                 break
-            else:
-                window.enable()
+            window.enable()
         elif re.match(r"new-relation-\d+", event):
             number = int(event.split('-')[2])
             frame: gui.Frame = window.find_element(f"Frame-{number}-relations")
@@ -106,27 +116,31 @@ def run_new_knowledge(window: gui.Window):
             number = len(frame.widget.children)
             window.extend_layout(frame, [[new_knowledge_element(number + 1)]])
         elif event == "save":
-            save(values)
+            try:
+                save(values)
+            except IDException:
+                continue
             window.disable()
             gui.popup_ok("Datei wurde gespeichert!")
             window.enable()
         elif event == "new-knowledge-set":
             # answer = gui.popup("Soll die aktuelle datei gespeichert werden?")
             window.disable()
-            answer,_ = gui.Window('Neues Wissensset?', [[gui.T('Soll das bestehende Wissen gespeichert werden?')],
-                                                      [gui.Yes(s=10), gui.No(s=10), gui.Cancel(s=10)]],
-                                disable_close=True).read(close=True)
+            answer, _ = gui.Window('Neues Wissensset?', [[gui.T('Soll das bestehende Wissen gespeichert werden?')],
+                                                         [gui.Yes(s=10), gui.No(s=10), gui.Cancel(s=10)]],
+                                   disable_close=True).read(close=True)
             window.enable()
             if answer == "Yes":
-                save(values)
+                try:
+                    save(values)
+                except IDException:
+                    continue
                 window.close()
                 gui.popup_ok("Datei wurde gespeichert!")
                 window = create_knowledge_window()
             elif answer == "No":
                 window.close()
                 window = create_knowledge_window()
-            else:
-                pass
         else:
             print("Unbekanntes Event! Abbruch")
             window.close()
