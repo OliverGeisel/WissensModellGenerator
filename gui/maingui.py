@@ -1,5 +1,6 @@
 import json
 import pathlib
+from typing import Union
 
 import PySimpleGUI as gui
 
@@ -8,7 +9,7 @@ from .new_knowlege import create_knowledge_window
 
 def create_main() -> gui.Window:
     layout = [[gui.Text("Wähle aus!")], [gui.Button("Einstellungen", key="settings")],
-              [gui.Button("Neus Wissen", key="new-knowledge")]]
+              [gui.Button("Neues Wissen", key="new-knowledge")]]
     return gui.Window("Wissensmodell Generator", layout)
 
 
@@ -37,7 +38,7 @@ def run_setting_window(window: gui.Window):
             save_settings(values)
 
 
-def run_main(window: gui.Window):
+def run_main(window: gui.Window) -> tuple[str, Union[gui.Window, None]]:
     while True:
         event, values = window.read()
         if event in [gui.WIN_X_EVENT, gui.WIN_CLOSED]:
@@ -53,3 +54,4 @@ def run_main(window: gui.Window):
             window.close()
             return event, create_knowledge_window()
     window.close()
+    return "END", None

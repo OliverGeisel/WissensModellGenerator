@@ -5,17 +5,26 @@ import re
 import PySimpleGUI as gui
 
 
+class IDException(Exception):
+    pass
+
+
+def get_new_relation(number, relation_number) -> list[list[gui.Element]]:
+    return [[gui.Combo(["is-Acronym", "is-Synonym", "has", "is", "part-of", "use", "defines"], "",
+                       key=f"element-{number}-relation_type-{relation_number}"),
+             gui.Input("", key=f"element-{number}-relation-{relation_number}")]]
+
+
 def new_knowledge_element(number: int) -> gui.Frame:
     layout = [
         [gui.Text("TYP:"),
-         gui.DropDown(["Term", "Definition", "Fact", ], "Term", key=f"element-{number}-type")],
+         gui.DropDown(["Term", "Definition", "Fact", "Exercise", "Example", "Code", "Question", "Answer"], "Term",
+                      key=f"element-{number}-type")],
         [gui.Text("Name/ID:", tooltip="Die ID setzt sich aus dem Input und der ID zusammen"),
          gui.Input("", key=f"element-{number}-name", tooltip="Die ID setzt sich aus dem Input und der ID zusammen")],
         [gui.Text("Inhalt:"), gui.Multiline("", key=f"element-{number}-content", size=(35, 3))],
         [gui.Frame("Relations",
-                   [[gui.Combo(["is-Acronym", "is-Synonym", "has", "is"], "", key=f"element-{number}-relation_type-1"),
-                     gui.Input("", key=f"element-{number}-relation-1")]],
-                   key=f"Frame-{number}-relations")],
+                   get_new_relation(number, 1), key=f"Frame-{number}-relations")],
         [gui.Button("Weitere Relation", key=f"new-relation-{number}")]]
     return gui.Frame("", layout=layout, key=f"Frame-element-{number}")
 
@@ -24,8 +33,11 @@ def create_knowledge_window() -> gui.Window:
     layout = [[gui.Frame("Elemente", [[new_knowledge_element(1)]], key="Frame-elements")],
               [gui.Button("Neues Element", key="new-element"), gui.Input("", key="output-name"),
                gui.Button("Speichern", key="save"), gui.Button("Neuer Wissenssatz", key="new-knowledge-set",
-                                                     tooltip="Neues leres Fenster um neuen Wissenssatz zu erstellen.")]]
-    return gui.Window("Neues Wissen", layout)
+                                                               tooltip="Neues leres Fenster um neuen Wissenssatz zu erstellen.")]]
+    return gui.Window("Neues Wissen", layout=[[gui.Column(layout=layout, size=(650, 300), expand_x=True, expand_y=True,
+                                                          scrollable=True, vertical_scroll_only=True,
+                                                          vertical_alignment="t")]],
+                      resizable=True, auto_size_text=True)
 
 
 def create_relations(keys: list, values: dict) -> list:
@@ -33,13 +45,9 @@ def create_relations(keys: list, values: dict) -> list:
     count = 0
     while count < len(keys):
         if "" not in [values[keys[count]], values[keys[count + 1]]]:
-            back.append({"relation_id": values[keys[count]], "relation_type": values[keys[count + 1]]})
+            back.append({"relation_id": values[keys[count + 1]], "relation_type": values[keys[count]]})
         count += 2
     return back
-
-
-class IDException(Exception):
-    pass
 
 
 def save(values: dict[str, str]):
@@ -73,7 +81,11 @@ def save(values: dict[str, str]):
     count = 1
     if not output_path_base.exists():
         output_path_base.mkdir(parents=True)
+    shown = False
     while output_file_path.exists():
+        if not shown:
+            gui.popup_ok("Datei existiert bereits! Wird umbenannt!")
+            shown = True
         print("Datei existiert bereits! Wird umbenannt!")
         old_name = str(output_file_path.absolute()).removesuffix('.json')
         if re.search(r"(.*)(\(\d+\))", old_name) is not None:
@@ -86,6 +98,7 @@ def save(values: dict[str, str]):
 
 def run_new_knowledge(window: gui.Window):
     event: str
+    n = 1
     while True:
         event, values = window.read()
         if event in [gui.WIN_X_EVENT, gui.WIN_CLOSED]:
@@ -110,7 +123,7 @@ def run_new_knowledge(window: gui.Window):
             number = int(event.split('-')[2])
             frame: gui.Frame = window.find_element(f"Frame-{number}-relations")
             relation_number = len(frame.widget.children) + 1
-            window.extend_layout(frame, [[gui.Input("", key=f"relation-{number}-{relation_number}")]])
+            window.extend_layout(frame, get_new_relation(number, relation_number))
         elif event == "new-element":
             frame = window.find_element("Frame-elements")
             number = len(frame.widget.children)
@@ -144,3 +157,6 @@ def run_new_knowledge(window: gui.Window):
         else:
             print("Unbekanntes Event! Abbruch")
             window.close()
+        old_size = window.size
+        n *= -1
+        window.size = (old_size[0], old_size[1] + n)
