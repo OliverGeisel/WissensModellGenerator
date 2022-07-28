@@ -9,6 +9,12 @@ def run():
             pass
         elif event == "new-knowledge":
             gui.run_new_knowledge(window)
+        elif event == "new-structure":
+            gui.run_new_structure(window)
+        elif event == "new-source":
+            gui.run_new_source(window)
+
+
     except Exception:
         input("Fehler! bitte enter drücken!")
     else:

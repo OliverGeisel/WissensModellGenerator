@@ -5,11 +5,14 @@ from typing import Union
 import PySimpleGUI as gui
 
 from .new_knowlege import create_knowledge_window
+from .new_source import create_source_window
+from .new_structure import create_structure_window
 
 
 def create_main() -> gui.Window:
     layout = [[gui.Text("Wähle aus!")], [gui.Button("Einstellungen", key="settings")],
-              [gui.Button("Neues Wissen", key="new-knowledge")]]
+              [gui.Button("Neues Wissen", key="new-knowledge")], [gui.Button("Neue Struktur", key="new-structure")],
+              gui.Button("Neue Wissensquelle", key="new-source")]
     return gui.Window("Wissensmodell Generator", layout)
 
 
@@ -53,5 +56,12 @@ def run_main(window: gui.Window) -> tuple[str, Union[gui.Window, None]]:
         if event == "new-knowledge":
             window.close()
             return event, create_knowledge_window()
+        if event == "new-structure":
+            window.close()
+            return event, create_structure_window()
+        if event == "new-source":
+            window.close()
+            return event, create_source_window()
+
     window.close()
     return "END", None
