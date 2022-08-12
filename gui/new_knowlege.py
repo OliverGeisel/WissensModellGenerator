@@ -10,7 +10,7 @@ class IDException(Exception):
 
 
 def get_new_relation(number, relation_number) -> list[list[gui.Element]]:
-    return [[gui.Combo(["is-Acronym", "is-Synonym", "has", "is", "part-of", "use", "defines"], "",
+    return [[gui.Combo(["is-Acronym", "is-Synonym", "has", "is", "part-of", "use", "defines", "contains"], "",
                        key=f"element-{number}-relation_type-{relation_number}"),
              gui.Input("", key=f"element-{number}-relation-{relation_number}")]]
 
