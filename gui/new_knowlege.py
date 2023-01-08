@@ -65,8 +65,9 @@ def create_knowledge_window() -> gui.Window:
     layout = [[gui.Column([[gui.Frame("Elemente", [[new_knowledge_element(1)]], key="Frame-elements")]]),
                gui.Column([[gui.Frame("Struktur", structure_layout)]])],
               [gui.Button("Neues Element", key="new-element"), gui.Input("", key="output-name"),
-               gui.Button("Speichern", key="save"), gui.Button("Neuer Wissenssatz", key="new-knowledge-set",
-                                                               tooltip="Neues leeres Fenster, um neuen Wissenssatz zu erstellen.")]]
+               gui.Button("Speichern", key="save"),
+               gui.Button("Neuer Wissenssatz", key="new-knowledge-set",
+                          tooltip="Neues leeres Fenster, um neuen Wissenssatz zu erstellen.")]]
     return gui.Window("Neues Wissen", layout=[[gui.Column(layout=layout, size=(950, 300), expand_x=True, expand_y=True,
                                                           scrollable=True, vertical_scroll_only=True,
                                                           vertical_alignment="t")]],
@@ -88,7 +89,7 @@ def parse_structure(id_keys, last_element, values):
         if re.match(r"\d+-id", key):
             new_last_element = {"key": last_element["key"] + "-" + key.removesuffix("-id"),
                                 "id": values[f"structure-{last_element['key']}-{key}"],
-                                "children": list()}
+                                "parts": list()}
             last_element["children"].append(new_last_element)
             new_keys = [new_key.removeprefix(key.split("-")[0] + "-") for new_key in id_keys if
                         new_key.startswith(key.removesuffix("-id"))]
