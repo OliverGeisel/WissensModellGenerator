@@ -11,8 +11,9 @@ from .new_structure import create_structure_window
 
 def create_main() -> gui.Window:
     layout = [[gui.Text("Wähle aus!")], [gui.Button("Einstellungen", key="settings")],
-              [gui.Button("Neues Wissen", key="new-knowledge")], [gui.Button("Neue Struktur", key="new-structure")],
-              gui.Button("Neue Wissensquelle", key="new-source")]
+              [gui.Button("Neues Wissen", key="new-knowledge")],
+              [gui.Button("Neue Struktur", key="new-structure")],
+              [gui.Button("Neue Wissensquelle", key="new-source")]]
     return gui.Window("Wissensmodell Generator", layout)
 
 

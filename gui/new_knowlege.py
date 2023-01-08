@@ -15,6 +15,24 @@ def get_new_relation(number, relation_number) -> list[list[gui.Element]]:
              gui.Input("", key=f"element-{number}-relation-{relation_number}")]]
 
 
+def create_new_structure_child(structure_frame: gui.Frame):
+    key = structure_frame.key.removesuffix("-children").removeprefix("structure-")
+    element_num = len(structure_frame.widget.children)
+    new_key = key + f"-{element_num}"
+    frame = gui.Frame("", [[gui.Text("Name:"), gui.Input(key=f"structure-{new_key}-id")],
+                           [gui.Column([[]], key=f"structure-{new_key}-children")],
+                           [gui.Button("Neues Kindelement", key=f"add-{new_key}-child")]],
+                      key=f"structure-{new_key}-structure-frame")
+    back = [[frame]]
+    return back
+
+
+def add_structure_element(event, window):
+    key = event.removeprefix("add-").removesuffix("-child")
+    structure_frame = window.find_element(f"structure-{key}-children")
+    window.extend_layout(structure_frame, create_new_structure_child(structure_frame))
+
+
 def new_knowledge_element(number: int) -> gui.Frame:
     layout = [
         [gui.Text("TYP:"),
@@ -22,6 +40,9 @@ def new_knowledge_element(number: int) -> gui.Frame:
                       key=f"element-{number}-type")],
         [gui.Text("Name/ID:", tooltip="Die ID setzt sich aus dem Input und der ID zusammen"),
          gui.Input("", key=f"element-{number}-name", tooltip="Die ID setzt sich aus dem Input und der ID zusammen")],
+        [gui.Text("Name/ID-Struktur-Element:", tooltip="Die ID des Strukturelements"),
+         gui.Input("", key=f"element-{number}-structure-name",
+                   tooltip="Die ID setzt sich aus dem Input und der ID zusammen")],
         [gui.Text("Inhalt:"), gui.Multiline("", key=f"element-{number}-content", size=(35, 3))],
         [gui.Frame("Relations",
                    get_new_relation(number, 1), key=f"Frame-{number}-relations")],
@@ -29,12 +50,23 @@ def new_knowledge_element(number: int) -> gui.Frame:
     return gui.Frame("", layout=layout, key=f"Frame-element-{number}")
 
 
+def create_structure_column_layout():
+    back = [[gui.Text("Area of Knowledge: "), gui.Input(key="structure-area-of-knowledge")],
+            [gui.Frame("Area of Knwoledge Kindelemente", [[gui.Column([[]], key="structure-_root-children")]],
+                       key="structure-_root-structure-frame")],
+            [gui.Column([[gui.Button("Neues Kindelement", key="add-_root-child")]])]
+            ]
+    return back
+
+
 def create_knowledge_window() -> gui.Window:
-    layout = [[gui.Frame("Elemente", [[new_knowledge_element(1)]], key="Frame-elements")],
+    structure_layout = create_structure_column_layout()
+    layout = [[gui.Column([[gui.Frame("Elemente", [[new_knowledge_element(1)]], key="Frame-elements")]]),
+               gui.Column([[gui.Frame("Struktur", structure_layout)]])],
               [gui.Button("Neues Element", key="new-element"), gui.Input("", key="output-name"),
                gui.Button("Speichern", key="save"), gui.Button("Neuer Wissenssatz", key="new-knowledge-set",
-                                                               tooltip="Neues leres Fenster um neuen Wissenssatz zu erstellen.")]]
-    return gui.Window("Neues Wissen", layout=[[gui.Column(layout=layout, size=(650, 300), expand_x=True, expand_y=True,
+                                                               tooltip="Neues leeres Fenster, um neuen Wissenssatz zu erstellen.")]]
+    return gui.Window("Neues Wissen", layout=[[gui.Column(layout=layout, size=(950, 300), expand_x=True, expand_y=True,
                                                           scrollable=True, vertical_scroll_only=True,
                                                           vertical_alignment="t")]],
                       resizable=True, auto_size_text=True)
@@ -42,16 +74,29 @@ def create_knowledge_window() -> gui.Window:
 
 def create_relations(keys: list, values: dict) -> list:
     back = []
-    count = 0
-    while count < len(keys):
+    count = 1
+    while count + 1 < len(keys):
         if "" not in [values[keys[count]], values[keys[count + 1]]]:
             back.append({"relation_id": values[keys[count + 1]], "relation_type": values[keys[count]]})
         count += 2
     return back
 
 
+def parse_structure(id_keys, last_element, values):
+    for key in id_keys:
+        if re.match(r"\d+-id", key):
+            new_last_element = {"key": last_element["key"] + key.removesuffix("-id"),
+                                "id": values[f"structure-{last_element['key']}-{key}"], "children": list()}
+            last_element["children"].append(new_last_element)
+            new_keys = [new_key.removeprefix(key.split("-")[0] + "-") for new_key in id_keys if
+                        new_key.startswith(key.removesuffix("-id"))]
+            parse_structure(new_keys, new_last_element, values)
+
+
 def save(values: dict[str, str]):
+    knowledge_model = dict()
     elements = []
+    knowledge_model["elements"] = elements
     elem_key = [key for key in values if key.startswith("element")]
     element_groups = dict()
     for key in elem_key:
@@ -71,7 +116,16 @@ def save(values: dict[str, str]):
                        create_relations(keys[3:], values)
                    }
         elements.append(element)
-    file_str = json.dumps(elements)
+    # ------------------- STRUCTURE ---------------------------------------------------------------
+
+    structure_keys = [key.removeprefix("structure-") for key in values if key.startswith("structure-")]
+    id_keys = [key.removeprefix("_root-") for key in structure_keys if key.startswith("_root-")]
+    area_of_knowledge = values['structure-area-of-knowledge']
+    structure = {"id": area_of_knowledge, "key": "_root", "children": list()}
+    parse_structure(id_keys, structure, values)
+    knowledge_model["structure"] = structure
+    # ------------------- FINISH ------------------------------------------------------------------
+    file_str = json.dumps(knowledge_model)
     path = pathlib.Path("./files/config.json")
     with open(path, "r") as config:
         output_path_base = pathlib.Path(json.loads(config.read())["path-to-output"])
@@ -143,6 +197,7 @@ def run_new_knowledge(window: gui.Window):
                                                          [gui.Yes(s=10), gui.No(s=10), gui.Cancel(s=10)]],
                                    disable_close=True).read(close=True)
             window.enable()
+            window.bring_to_front()
             if answer == "Yes":
                 try:
                     save(values)
@@ -151,12 +206,17 @@ def run_new_knowledge(window: gui.Window):
                 window.close()
                 gui.popup_ok("Datei wurde gespeichert!")
                 window = create_knowledge_window()
+                window.finalize()
             elif answer == "No":
                 window.close()
                 window = create_knowledge_window()
+                window.finalize()
+        elif re.match(r"add-[-_\w]*-child", event):
+            add_structure_element(event, window)
         else:
             print("Unbekanntes Event! Abbruch")
             window.close()
+            break
         old_size = window.size
         n *= -1
         window.size = (old_size[0], old_size[1] + n)

@@ -14,9 +14,9 @@ def run():
         elif event == "new-source":
             gui.run_new_source(window)
 
-
-    except Exception:
+    except Exception as e:
         input("Fehler! bitte enter drücken!")
+        print(e.with_traceback(tb=None))
     else:
         print("Bye!")
 
