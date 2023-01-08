@@ -1,8 +1,8 @@
-import json
-import pathlib
 import re
 
 import PySimpleGUI as gui
+
+from core import save_as_file
 
 
 class IDException(Exception):
@@ -35,14 +35,15 @@ def add_structure_element(event, window):
 
 def new_knowledge_element(number: int) -> gui.Frame:
     layout = [
-        [gui.Text("TYP:"),
-         gui.DropDown(["Term", "Definition", "Fact", "Exercise", "Example", "Code", "Question", "Answer"], "Term",
-                      key=f"element-{number}-type")],
-        [gui.Text("Name/ID:", tooltip="Die ID setzt sich aus dem Input und der ID zusammen"),
-         gui.Input("", key=f"element-{number}-name", tooltip="Die ID setzt sich aus dem Input und der ID zusammen")],
+        [gui.Text("TYP:", tooltip="Art des Wissens"),
+         gui.DropDown(
+             ["Term", "Definition", "Fact", "Proof", "Exercise", "Example", "Code", "Question", "Answer", "Node"],
+             "Term", key=f"element-{number}-type")],
+        [gui.Text("Name/ID:", tooltip="Die ID setzt sich aus dem Input und dem Typ zusammen"),
+         gui.Input("", key=f"element-{number}-name", tooltip="Die ID setzt sich aus dem Input und dem Typ zusammen")],
         [gui.Text("Name/ID-Struktur-Element:", tooltip="Die ID des Strukturelements"),
          gui.Input("", key=f"element-{number}-structure-name",
-                   tooltip="Die ID setzt sich aus dem Input und der ID zusammen")],
+                   tooltip="Die ID des Strukturelements")],
         [gui.Text("Inhalt:"), gui.Multiline("", key=f"element-{number}-content", size=(35, 3))],
         [gui.Frame("Relations",
                    get_new_relation(number, 1), key=f"Frame-{number}-relations")],
@@ -96,7 +97,7 @@ def parse_structure(id_keys, last_element, values):
 def save(values: dict[str, str]):
     knowledge_model = dict()
     elements = []
-    knowledge_model["elements"] = elements
+    knowledge_model["knowledge"] = elements
     elem_key = [key for key in values if key.startswith("element")]
     element_groups = dict()
     for key in elem_key:
@@ -111,9 +112,10 @@ def save(values: dict[str, str]):
             raise IDException
         element = {"type": values[keys[0]].upper(),
                    "id": f"{values[keys[1]]}-{values[keys[0]].upper()}",
-                   "content": values[keys[2]],
+                   "structure": values[keys[2]],
+                   "content": values[keys[3]],
                    "relations":
-                       create_relations(keys[3:], values)
+                       create_relations(keys[4:], values)
                    }
         elements.append(element)
     # ------------------- STRUCTURE ---------------------------------------------------------------
@@ -123,31 +125,10 @@ def save(values: dict[str, str]):
     area_of_knowledge = values['structure-area-of-knowledge']
     structure = {"id": area_of_knowledge, "key": "_root", "children": list()}
     parse_structure(id_keys, structure, values)
+    knowledge_model["sources"] = dict()
     knowledge_model["structure"] = structure
     # ------------------- FINISH ------------------------------------------------------------------
-    file_str = json.dumps(knowledge_model)
-    path = pathlib.Path("./files/config.json")
-    with open(path, "r") as config:
-        output_path_base = pathlib.Path(json.loads(config.read())["path-to-output"])
-    output_file_path = output_path_base.joinpath(f"{values['output-name']}.json")
-    if output_file_path.name == ".json":
-        output_file_path = output_path_base.joinpath("knowledge.json")
-    count = 1
-    if not output_path_base.exists():
-        output_path_base.mkdir(parents=True)
-    shown = False
-    while output_file_path.exists():
-        if not shown:
-            gui.popup_ok("Datei existiert bereits! Wird umbenannt!")
-            shown = True
-        print("Datei existiert bereits! Wird umbenannt!")
-        old_name = str(output_file_path.absolute()).removesuffix('.json')
-        if re.search(r"(.*)(\(\d+\))", old_name) is not None:
-            old_name = re.search(r"(.*)(\(\d+\))", old_name)[1]
-        output_file_path = pathlib.Path(f"{old_name}({count}).json")
-        count += 1
-    with open(output_file_path, "w") as output_file:
-        output_file.write(file_str)
+    save_as_file(knowledge_model, values)
 
 
 def run_new_knowledge(window: gui.Window):
@@ -214,9 +195,10 @@ def run_new_knowledge(window: gui.Window):
         elif re.match(r"add-[-_\w]*-child", event):
             add_structure_element(event, window)
         else:
-            print("Unbekanntes Event! Abbruch")
+            print("Unbekanntes Event! Abbruch!")
             window.close()
             break
         old_size = window.size
         n *= -1
         window.size = (old_size[0], old_size[1] + n)
+    return

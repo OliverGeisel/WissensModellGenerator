@@ -16,7 +16,7 @@ def run():
 
     except Exception as e:
         input("Fehler! bitte enter drücken!")
-        print(e.with_traceback(tb=None))
+        print(e)
     else:
         print("Bye!")
 
