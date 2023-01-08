@@ -86,8 +86,9 @@ def create_relations(keys: list, values: dict) -> list:
 def parse_structure(id_keys, last_element, values):
     for key in id_keys:
         if re.match(r"\d+-id", key):
-            new_last_element = {"key": last_element["key"] + key.removesuffix("-id"),
-                                "id": values[f"structure-{last_element['key']}-{key}"], "children": list()}
+            new_last_element = {"key": last_element["key"] + "-" + key.removesuffix("-id"),
+                                "id": values[f"structure-{last_element['key']}-{key}"],
+                                "children": list()}
             last_element["children"].append(new_last_element)
             new_keys = [new_key.removeprefix(key.split("-")[0] + "-") for new_key in id_keys if
                         new_key.startswith(key.removesuffix("-id"))]
@@ -123,12 +124,12 @@ def save(values: dict[str, str]):
     structure_keys = [key.removeprefix("structure-") for key in values if key.startswith("structure-")]
     id_keys = [key.removeprefix("_root-") for key in structure_keys if key.startswith("_root-")]
     area_of_knowledge = values['structure-area-of-knowledge']
-    structure = {"id": area_of_knowledge, "key": "_root", "children": list()}
+    structure = {"area-of-knowledge": area_of_knowledge, "key": "_root", "children": list()}
     parse_structure(id_keys, structure, values)
-    knowledge_model["sources"] = dict()
     knowledge_model["structure"] = structure
     # ------------------- FINISH ------------------------------------------------------------------
-    save_as_file(knowledge_model, values)
+    knowledge_model["sources"] = dict()
+    save_as_file(knowledge_model, values, "knowledge")
 
 
 def run_new_knowledge(window: gui.Window):
