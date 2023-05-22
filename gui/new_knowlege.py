@@ -130,7 +130,7 @@ def save(values: dict[str, str]):
     area_of_knowledge = values['structure-area-of-knowledge']
     structure = {"name": area_of_knowledge, "key": "_root", "children": list()}
     parse_structure(id_keys, structure, values)
-    knowledge_model["sources"] = dict()
+    knowledge_model["sources"] = list()
     knowledge_model["structure"] = structure
 
     # ------------------- FINISH ------------------------------------------------------------------
