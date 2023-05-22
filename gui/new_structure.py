@@ -1,8 +1,14 @@
+import json
+import pathlib
+import re
+
 import PySimpleGUI as gui
+
+from gui.new_knowlege import create_knowledge_element, IDException, parse_relations
 
 
 def create_structure_window() -> gui.Window:
-    layout = [[gui.Frame("Elemente", [[new_knowledge_element(1)]], key="Frame-elements")],
+    layout = [[gui.Frame("Elemente", [[create_knowledge_element(1)]], key="Frame-elements")],
               [gui.Button("Neues Element", key="new-element"), gui.Input("", key="output-name"),
                gui.Button("Speichern", key="save"), gui.Button("Neuer Wissenssatz", key="new-knowledge-set",
                                                                tooltip="Neues leres Fenster um neuen Wissenssatz zu erstellen.")]]
@@ -31,7 +37,7 @@ def save(values: dict[str, str]):
                    "id": f"{values[keys[1]]}-{values[keys[0]].upper()}",
                    "content": values[keys[2]],
                    "relations":
-                       create_relations(keys[3:], values)
+                       parse_relations(keys[3:], values)
                    }
         elements.append(element)
     file_str = json.dumps(elements)
