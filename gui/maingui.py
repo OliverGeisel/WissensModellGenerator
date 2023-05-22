@@ -4,7 +4,7 @@ from typing import Union
 
 import PySimpleGUI as gui
 
-from .new_knowlege import create_knowledge_window
+from .new_knowledge import create_knowledge_window
 from .new_source import create_source_window
 from .new_structure import create_structure_window
 
