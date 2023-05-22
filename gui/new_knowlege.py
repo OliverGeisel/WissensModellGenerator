@@ -18,7 +18,7 @@ def create_new_relation(number, relation_number) -> list[list[gui.Element]]:
 def create_new_structure_child(structure_frame: gui.Frame):
     key = structure_frame.key.removesuffix("-children").removeprefix("structure-")
     element_num = len(structure_frame.widget.children)
-    new_key = key + f"-{element_num}"
+    new_key = key + f"/{element_num}"
     frame = gui.Frame("", [[gui.Text("Name:"), gui.Input(key=f"structure-{new_key}-id")],
                            [gui.Column([[]], key=f"structure-{new_key}-children")],
                            [gui.Button("Neues Kindelement", key=f"add-{new_key}-child")]],
@@ -86,12 +86,14 @@ def parse_relations(keys: list, values: dict) -> list:
 
 def parse_structure(id_keys: list, parent: dict, values: dict):
     for key in id_keys:
+        key_without_suffix = key.removesuffix("-id")
         if re.match(r"\d+-id", key):
-            new_last_element = {"key": parent["key"] + "/" + key.removesuffix("-id"),
-                                "id": values[f"structure-{parent['key']}-{key}"], "children": list()}
+            new_last_element = {"key": parent["key"] + "/" + key_without_suffix,
+                                "name": values[f"structure-{parent['key']}/{key}"],
+                                "children": list()}
             parent["children"].append(new_last_element)
-            new_keys = [new_key.removeprefix(key.split("-")[0] + "-") for new_key in id_keys if
-                        new_key.startswith(key.removesuffix("-id"))]
+            new_keys = [child_key.removeprefix(key_without_suffix + "/") for child_key in id_keys if
+                        child_key.startswith(key_without_suffix + "/")]
             parse_structure(new_keys, new_last_element, values)
 
 
@@ -124,9 +126,9 @@ def save(values: dict[str, str]):
 
     # ------------------- STRUCTURE ---------------------------------------------------------------
     structure_keys = [key.removeprefix("structure-") for key in values if key.startswith("structure-")]
-    id_keys = [key.removeprefix("_root-") for key in structure_keys if key.startswith("_root-")]
+    id_keys = [key.removeprefix("_root/") for key in structure_keys if key.startswith("_root/")]
     area_of_knowledge = values['structure-area-of-knowledge']
-    structure = {"id": area_of_knowledge, "key": "_root", "children": list()}
+    structure = {"name": area_of_knowledge, "key": "_root", "children": list()}
     parse_structure(id_keys, structure, values)
     knowledge_model["sources"] = dict()
     knowledge_model["structure"] = structure
@@ -197,7 +199,7 @@ def run_new_knowledge(window: gui.Window):
                 window.close()
                 window = create_knowledge_window()
                 window.finalize()
-        elif re.match(r"add-[-_\w]*-child", event):
+        elif re.match(r"add-[/_\w]*-child", event):
             add_structure_element(event, window)
         else:
             print("Unbekanntes Event! Abbruch!")
