@@ -10,8 +10,9 @@ from gui.new_knowlege import create_knowledge_element, IDException, parse_relati
 def create_structure_window() -> gui.Window:
     layout = [[gui.Frame("Elemente", [[create_knowledge_element(1)]], key="Frame-elements")],
               [gui.Button("Neues Element", key="new-element"), gui.Input("", key="output-name"),
-               gui.Button("Speichern", key="save"), gui.Button("Neuer Wissenssatz", key="new-knowledge-set",
-                                                               tooltip="Neues leres Fenster um neuen Wissenssatz zu erstellen.")]]
+               gui.Button("Speichern", key="save"),
+               gui.Button("Neuer Wissenssatz", key="new-knowledge-set",
+                            tooltip="Neues leeres Fenster um neuen Wissenssatz zu erstellen.")]]
     return gui.Window("Neue WissenElemente/Struktur",
                       layout=[[gui.Column(layout=layout, size=(650, 300), expand_x=True, expand_y=True,
                                           scrollable=True, vertical_scroll_only=True,

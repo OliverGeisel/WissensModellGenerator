@@ -65,8 +65,9 @@ def create_knowledge_window() -> gui.Window:
     layout = [[gui.Column([[gui.Frame("Elemente", [[create_knowledge_element(1)]], key="Frame-elements")]]),
                gui.Column([[gui.Frame("Struktur", structure_layout)]])],
               [gui.Button("Neues Element", key="new-element"), gui.Input("", key="output-name"),
-               gui.Button("Speichern", key="save"), gui.Button("Neuer Wissenssatz", key="new-knowledge-set",
-                                                               tooltip="Neues leeres Fenster, um neuen Wissenssatz zu erstellen.")]]
+               gui.Button("Speichern", key="save"),
+               gui.Button("Neuer Wissenssatz", key="new-knowledge-set",
+                            tooltip="Neues leeres Fenster, um neuen Wissenssatz zu erstellen.")]]
     return gui.Window("Neues Wissen", layout=[[gui.Column(layout=layout, size=(950, 300), expand_x=True, expand_y=True,
                                                           scrollable=True, vertical_scroll_only=True,
                                                           vertical_alignment="t")]],

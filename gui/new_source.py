@@ -3,12 +3,12 @@ import PySimpleGUI as gui
 from core import save_as_file
 from gui.new_knowlege import IDException
 
-
+MEDIA_TYPES = ("Internal_Media", "Resolvable_Reference", "Not_Resolvable_Reference", "Unknown_Source")
 def new_source_element(number: int) -> gui.Frame:
     layout = [
         [gui.Text("TYP:"),
-         gui.DropDown(["InternalMedia", "ResolvableReference", "NotResolvableReference", "UnknownSource"],
-                      "InternalMedia", key=f"source-{number}-type")],
+         gui.DropDown(MEDIA_TYPES,
+                      MEDIA_TYPES[0], key=f"source-{number}-type")],
         [gui.Text("Name/ID:", tooltip="Die ID setzt sich aus dem Input und dem Typ zusammen. Muss einzigartig sein!"),
          gui.Input("", key=f"source-{number}-id",
                    tooltip="Die ID setzt sich aus dem Input und dem Typ zusammen. Muss einzigartig sein!")],
@@ -22,8 +22,9 @@ def new_source_element(number: int) -> gui.Frame:
 def create_source_window() -> gui.Window:
     layout = [[gui.Frame("Quellen", [[new_source_element(1)]], key="Frame-sources")],
               [gui.Button("Neue Quelle", key="new-source"), gui.Input("", key="output-name"),
-               gui.Button("Speichern", key="save"), gui.Button("Neue Wissensquellen", key="new-knowledge-set",
-                                                               tooltip="Neues leeres Fenster, um neuen Quellensatz zu erstellen.")]]
+               gui.Button("Speichern", key="save"),
+               gui.Button("Neue Wissensquellen", key="new-knowledge-set",
+                          tooltip="Neues leeres Fenster, um neuen Quellensatz zu erstellen.")]]
     return gui.Window("Neue Wissensquellen",
                       layout=[[gui.Column(layout=layout, size=(650, 300), expand_x=True, expand_y=True,
                                           scrollable=True, vertical_scroll_only=True,
