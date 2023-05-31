@@ -9,16 +9,21 @@ class IDException(Exception):
     pass
 
 
+RELATION_TYPES = ("is-Acronym", "is-Synonym", "has", "is", "part-of", "use", "defines", "contains")
+ELEMENT_TYPES = ("Term", "Definition", "Fact", "Proof", "Exercise", "Example", "Code", "Question", "Answer", "Node")
+
+
 def create_new_relation(number, relation_number) -> list[list[gui.Element]]:
-    return [[gui.Combo(["is-Acronym", "is-Synonym", "has", "is", "part-of", "use", "defines", "contains"], "",
+    return [[gui.Combo(RELATION_TYPES, "",
                        key=f"element-{number}-relation_type-{relation_number}"),
-             gui.Input("", key=f"element-{number}-relation-{relation_number}")]]
+             gui.Input("", key=f"element-{number}-relation-{relation_number}"),
+             gui.DropDown(ELEMENT_TYPES, ELEMENT_TYPES[0], key=f"element-{number}-relation_el_type-{relation_number}")]]
 
 
 def create_new_structure_child(structure_frame: gui.Frame):
     key = structure_frame.key.removesuffix("-children").removeprefix("structure-")
     element_num = len(structure_frame.widget.children)
-    new_key = key + f"-{element_num}"
+    new_key = key + f"/{element_num}"
     frame = gui.Frame("", [[gui.Text("Name:"), gui.Input(key=f"structure-{new_key}-id")],
                            [gui.Column([[]], key=f"structure-{new_key}-children")],
                            [gui.Button("Neues Kindelement", key=f"add-{new_key}-child")]],
@@ -36,9 +41,7 @@ def add_structure_element(event, window):
 def create_knowledge_element(number: int) -> gui.Frame:
     layout = [
         [gui.Text("TYP:", tooltip="Art des Wissens"),
-         gui.DropDown(
-             ["Term", "Definition", "Fact", "Proof", "Exercise", "Example", "Code", "Question", "Answer", "Node"],
-             "Term", key=f"element-{number}-type")],
+         gui.DropDown(ELEMENT_TYPES, ELEMENT_TYPES[0], key=f"element-{number}-type")],
         [gui.Text("Name/ID:", tooltip="Die ID setzt sich aus dem Input und dem Typ zusammen"),
          gui.Input("", key=f"element-{number}-name", tooltip="Die ID setzt sich aus dem Input und dem Typ zusammen")],
         [gui.Text("Name/ID-Struktur-Element:", tooltip="Die ID des Strukturelements"),
@@ -67,7 +70,7 @@ def create_knowledge_window() -> gui.Window:
               [gui.Button("Neues Element", key="new-element"), gui.Input("", key="output-name"),
                gui.Button("Speichern", key="save"),
                gui.Button("Neuer Wissenssatz", key="new-knowledge-set",
-                            tooltip="Neues leeres Fenster, um neuen Wissenssatz zu erstellen.")]]
+                          tooltip="Neues leeres Fenster, um neuen Wissenssatz zu erstellen.")]]
     return gui.Window("Neues Wissen", layout=[[gui.Column(layout=layout, size=(950, 300), expand_x=True, expand_y=True,
                                                           scrollable=True, vertical_scroll_only=True,
                                                           vertical_alignment="t")]],
@@ -77,21 +80,24 @@ def create_knowledge_window() -> gui.Window:
 def parse_relations(keys: list, values: dict) -> list:
     back = []
     count = 0
-    while count + 1 < len(keys):
+    while count + 2 < len(keys):
         if "" not in [values[keys[count]], values[keys[count + 1]]]:
-            back.append({"relation_id": values[keys[count + 1]], "relation_type": values[keys[count]]})
-        count += 2
+            back.append({"relation_id": values[keys[count + 1]] + "-" + values[keys[count + 2].upper()],
+                         "relation_type": values[keys[count]]})
+        count += 3
     return back
 
 
 def parse_structure(id_keys: list, parent: dict, values: dict):
     for key in id_keys:
+        key_without_suffix = key.removesuffix("-id")
         if re.match(r"\d+-id", key):
-            new_last_element = {"key": parent["key"] + "/" + key.removesuffix("-id"),
-                                "id": values[f"structure-{parent['key']}-{key}"], "children": list()}
+            new_last_element = {"key": parent["key"] + "/" + key_without_suffix,
+                                "name": values[f"structure-{parent['key']}/{key}"],
+                                "children": list()}
             parent["children"].append(new_last_element)
-            new_keys = [new_key.removeprefix(key.split("-")[0] + "-") for new_key in id_keys if
-                        new_key.startswith(key.removesuffix("-id"))]
+            new_keys = [child_key.removeprefix(key_without_suffix + "/") for child_key in id_keys if
+                        child_key.startswith(key_without_suffix + "/")]
             parse_structure(new_keys, new_last_element, values)
 
 
@@ -124,11 +130,16 @@ def save(values: dict[str, str]):
 
     # ------------------- STRUCTURE ---------------------------------------------------------------
     structure_keys = [key.removeprefix("structure-") for key in values if key.startswith("structure-")]
-    id_keys = [key.removeprefix("_root-") for key in structure_keys if key.startswith("_root-")]
+    id_keys = [key.removeprefix("_root/") for key in structure_keys if key.startswith("_root/")]
     area_of_knowledge = values['structure-area-of-knowledge']
-    structure = {"id": area_of_knowledge, "key": "_root", "children": list()}
+    structure = {"name": area_of_knowledge, "key": "_root", "children": list()}
     parse_structure(id_keys, structure, values)
-    knowledge_model["sources"] = dict()
+    knowledge_model["sources"] = list({
+        "type": "UNKNOWNSOURCE",
+        "id": "Unbekannt-UNKNOWNSOURCE",
+        "name": "",
+        "content": ""
+    })
     knowledge_model["structure"] = structure
 
     # ------------------- FINISH ------------------------------------------------------------------
@@ -197,7 +208,7 @@ def run_new_knowledge(window: gui.Window):
                 window.close()
                 window = create_knowledge_window()
                 window.finalize()
-        elif re.match(r"add-[-_\w]*-child", event):
+        elif re.match(r"add-[/_\w]*-child", event):
             add_structure_element(event, window)
         else:
             print("Unbekanntes Event! Abbruch!")

@@ -4,16 +4,18 @@ from typing import Union
 
 import PySimpleGUI as gui
 
-from .new_knowlege import create_knowledge_window
+from .new_knowledge import create_knowledge_window
 from .new_source import create_source_window
 from .new_structure import create_structure_window
 
 
 def create_main() -> gui.Window:
-    layout = [[gui.Text("Wähle aus!")], [gui.Button("Einstellungen", key="settings")],
+    layout = [[gui.Text("Wähle aus!")],
               [gui.Button("Neues Wissen", key="new-knowledge")],
               [gui.Button("Neue Struktur", key="new-structure")],
-              [gui.Button("Neue Wissensquelle", key="new-source")]]
+              [gui.Button("Neue Wissensquelle", key="new-source")],
+              [gui.HSep()],
+              [gui.Button("Einstellungen", key="settings")]]
     return gui.Window("Wissensmodell Generator", layout)
 
 

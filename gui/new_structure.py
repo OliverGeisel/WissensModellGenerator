@@ -4,7 +4,7 @@ import re
 
 import PySimpleGUI as gui
 
-from gui.new_knowlege import create_knowledge_element, IDException, parse_relations
+from gui.new_knowledge import create_knowledge_element, IDException, parse_relations
 
 
 def create_structure_window() -> gui.Window:

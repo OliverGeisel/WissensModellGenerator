@@ -1,7 +1,7 @@
 import PySimpleGUI as gui
 
 from core import save_as_file
-from gui.new_knowlege import IDException
+from gui.new_knowledge import IDException
 
 MEDIA_TYPES = ("Internal_Media", "Resolvable_Reference", "Not_Resolvable_Reference", "Unknown_Source")
 def new_source_element(number: int) -> gui.Frame:
@@ -33,7 +33,7 @@ def create_source_window() -> gui.Window:
 
 
 def save(values: dict[str, str]):
-    knowledge_model = {"knowledge": dict(), "structure": dict()}
+    knowledge_model = {"knowledge": list(), "structure": dict()}
     sources = []
     elem_key = [key for key in values if key.startswith("source")]
     source_groups = dict()
@@ -61,10 +61,13 @@ def run_new_source(window: gui.Window):
     n = 1
     while True:
         event, values = window.read()
-        if event in [gui.WIN_X_EVENT, gui.WIN_CLOSED]:
+        if event == gui.WIN_CLOSED:
+            break
+        if event in [gui.WIN_CLOSED]:
             window.disable()
-            answer, _ = gui.Window('Neues Quellenset?', [[gui.T('Sollen die bestehenden Quellen gespeichert werden?')],
-                                                         [gui.Yes(s=10), gui.No(s=10), gui.Cancel(s=10)]],
+            answer, _ = gui.Window('Neues Quellenset?',
+                                   [[gui.T('Sollen die bestehenden Quellen gespeichert werden?')],
+                                    [gui.Yes(s=10), gui.No(s=10), gui.Cancel(s=10)]],
                                    disable_close=True).read(close=True)
             if answer == "Yes":
                 try:
