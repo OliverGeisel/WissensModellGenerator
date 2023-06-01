@@ -1,18 +1,44 @@
-import json
-import pathlib
 import re
 
 import PySimpleGUI as gui
 
-from gui.new_knowledge import create_knowledge_element, IDException, parse_relations
+from core import save_as_file, add_empty_source, IDException, collect_structure
+
+
+def create_new_structure_child(structure_frame: gui.Frame):
+    key = structure_frame.key.removesuffix("-children").removeprefix("structure-")
+    element_num = len(structure_frame.widget.children)
+    new_key = key + f"/{element_num}"
+    frame = gui.Frame("", [[gui.Text("Name:"), gui.Input(key=f"structure-{new_key}-id")],
+                           [gui.Column([[]], key=f"structure-{new_key}-children")],
+                           [gui.Button("Neues Kindelement", key=f"add-{new_key}-child")]],
+                      key=f"structure-{new_key}-structure-frame")
+    back = [[frame]]
+    return back
+
+
+def add_structure_element(event: str, window: gui.Window):
+    key = event.removeprefix("add-").removesuffix("-child")
+    structure_frame = window.find_element(f"structure-{key}-children")
+    window.extend_layout(structure_frame, create_new_structure_child(structure_frame))
+
+
+def create_structure_column_layout():
+    back = [[gui.Text("Area of Knowledge: "), gui.Input(key="structure-area-of-knowledge")],
+            [gui.Frame("Area of Knwoledge Kindelemente", [[gui.Column([[]], key="structure-_root-children")]],
+                       key="structure-_root-structure-frame")],
+            [gui.Column([[gui.Button("Neues Kindelement", key="add-_root-child")]])]
+            ]
+    return back
 
 
 def create_structure_window() -> gui.Window:
-    layout = [[gui.Frame("Elemente", [[create_knowledge_element(1)]], key="Frame-elements")],
+    structure_layout = create_structure_column_layout()
+    layout = [[gui.Column([[gui.Frame("Struktur", structure_layout)]])],
               [gui.Button("Neues Element", key="new-element"), gui.Input("", key="output-name"),
                gui.Button("Speichern", key="save"),
                gui.Button("Neuer Wissenssatz", key="new-knowledge-set",
-                            tooltip="Neues leeres Fenster um neuen Wissenssatz zu erstellen.")]]
+                          tooltip="Neues leeres Fenster um neuen Wissenssatz zu erstellen.")]]
     return gui.Window("Neue WissenElemente/Struktur",
                       layout=[[gui.Column(layout=layout, size=(650, 300), expand_x=True, expand_y=True,
                                           scrollable=True, vertical_scroll_only=True,
@@ -21,50 +47,49 @@ def create_structure_window() -> gui.Window:
 
 
 def save(values: dict[str, str]):
-    elements = []
-    elem_key = [key for key in values if key.startswith("element")]
-    element_groups = dict()
-    for key in elem_key:
-        number = key.split("-")[1]
-        if number not in element_groups:
-            element_groups[number] = list()
-        element_groups[number].append(key)
-
-    for group, keys in element_groups.items():
-        if values[keys[1]] == "":
-            gui.popup_error(f"Element {group} hat keine ID. Bitte angeben", title="Fehlende ID")
-            raise IDException
-        element = {"type": values[keys[0]].upper(),
-                   "id": f"{values[keys[1]]}-{values[keys[0]].upper()}",
-                   "content": values[keys[2]],
-                   "relations":
-                       parse_relations(keys[3:], values)
-                   }
-        elements.append(element)
-    file_str = json.dumps(elements)
-    path = pathlib.Path("./files/config.json")
-    with open(path, "r") as config:
-        output_path_base = pathlib.Path(json.loads(config.read())["path-to-output"])
-    output_file_path = output_path_base.joinpath(f"{values['output-name']}.json")
-    if output_file_path.name == ".json":
-        output_file_path = output_path_base.joinpath("knowledge.json")
-    count = 1
-    if not output_path_base.exists():
-        output_path_base.mkdir(parents=True)
-    shown = False
-    while output_file_path.exists():
-        if not shown:
-            gui.popup_ok("Datei existiert bereits! Wird umbenannt!")
-            shown = True
-        print("Datei existiert bereits! Wird umbenannt!")
-        old_name = str(output_file_path.absolute()).removesuffix('.json')
-        if re.search(r"(.*)(\(\d+\))", old_name) is not None:
-            old_name = re.search(r"(.*)(\(\d+\))", old_name)[1]
-        output_file_path = pathlib.Path(f"{old_name}({count}).json")
-        count += 1
-    with open(output_file_path, "w") as output_file:
-        output_file.write(file_str)
+    knowledge_model = {"knowledge": list()}
+    add_empty_source(knowledge_model)
+    collect_structure(knowledge_model, values)
+    save_as_file(knowledge_model, values["output-name"])
 
 
 def run_new_structure(window: gui.Window):
-    return None
+    event: str
+    n = 1
+    while True:
+        event, values = window.read()
+        if event == gui.WINDOW_CLOSED:
+            return
+        elif event == gui.WIN_X_EVENT:
+            window.disable()
+            answer, _ = gui.Window('Neues Wissensset?',
+                                   [[gui.T('Soll das bestehende Wissen gespeichert werden?')],
+                                    [gui.Yes(s=10), gui.No(s=10), gui.Cancel(s=10)]],
+                                   disable_close=True).read(close=True)
+            if answer == "Yes":
+                try:
+                    save(values)
+                except IDException:
+                    window.enable()
+                    continue
+                gui.popup_ok("Datei wurde gespeichert!")
+            window.close()
+            break
+        elif event == "save":
+            try:
+                save(values)
+            except IDException:
+                continue
+            window.disable()
+            gui.popup_ok("Datei wurde gespeichert!")
+            window.enable()
+        elif re.match(r"add-[/_\w]*-child", event):
+            add_structure_element(event, window)
+        else:
+            print("Unbekanntes Event! Abbruch!")
+            window.close()
+            break
+        old_size = window.size
+        n *= -1
+        window.size = (old_size[0], old_size[1] + n)
+    return

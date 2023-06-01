@@ -65,5 +65,6 @@ def run_main(window: gui.Window) -> tuple[str, Union[gui.Window, None]]:
         if event == "new-source":
             window.close()
             return event, create_source_window()
-    window.close()
+    if not window.is_closed():
+        window.close()
     return "END", None

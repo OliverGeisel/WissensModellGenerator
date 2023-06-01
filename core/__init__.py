@@ -5,12 +5,16 @@ import re
 import PySimpleGUI as gui
 
 
-def save_as_file(model, values, base_file_name="file"):
+class IDException(Exception):
+    pass
+
+
+def save_as_file(model: dict, output_name: str, base_file_name="file"):
     file_str = json.dumps(model)
     path = pathlib.Path("./files/config.json")
     with open(path, "r") as config:
         output_path_base = pathlib.Path(json.loads(config.read())["path-to-output"])
-    output_file_path = output_path_base.joinpath(f"{values['output-name']}.json")
+    output_file_path = output_path_base.joinpath(f"{output_name}.json")
     if output_file_path.name == ".json":
         output_file_path = output_path_base.joinpath(f"{base_file_name}.json")
     count = 1
@@ -29,3 +33,81 @@ def save_as_file(model, values, base_file_name="file"):
         count += 1
     with open(output_file_path, "w") as output_file:
         output_file.write(file_str)
+
+
+def parse_relations(keys: list, values: dict) -> list:
+    back = []
+    count = 0
+    while count + 2 < len(keys):
+        if "" not in [values[keys[count]], values[keys[count + 1]]]:
+            back.append({"relation_id": values[keys[count + 1]] + "-" + values[keys[count + 2].upper()],
+                         "relation_type": values[keys[count]]})
+        count += 3
+    return back
+
+
+def parse_structure(id_keys: list, parent: dict, values: dict) -> dict:
+    for key in id_keys:
+        key_without_suffix = key.removesuffix("-id")
+        if re.match(r"\d+-id", key):
+            new_last_element = {"key": parent["key"] + "/" + key_without_suffix,
+                                "name": values[f"structure-{parent['key']}/{key}"],
+                                "children": list()}
+            parent["children"].append(new_last_element)
+            new_keys = [child_key.removeprefix(key_without_suffix + "/") for child_key in id_keys if
+                        child_key.startswith(key_without_suffix + "/")]
+            parse_structure(new_keys, new_last_element, values)
+    return parent
+
+
+def collect_structure(knowledge_model, values):
+    structure_keys = [key.removeprefix("structure-") for key in values if key.startswith("structure-")]
+    id_keys = [key.removeprefix("_root/") for key in structure_keys if key.startswith("_root/")]
+    area_of_knowledge = values['structure-area-of-knowledge']
+    structure = {"name": area_of_knowledge, "key": "_root", "children": list()}
+    parse_structure(id_keys, structure, values)
+    knowledge_model["structure"] = structure
+
+
+def collect_elements(elements, values):
+    elem_key = [key for key in values if key.startswith("element")]
+    element_groups = dict()
+    for key in elem_key:
+        number = key.split("-")[1]
+        if number not in element_groups:
+            element_groups[number] = list()
+        element_groups[number].append(key)
+    for group, keys in element_groups.items():
+        if values[keys[1]] == "":
+            gui.popup_error(f"Element {group} hat keine ID. Bitte angeben", title="Fehlende ID")
+            raise IDException
+        type_name = values[keys[0]].upper()
+        element = {"type": type_name,
+                   "id": f"{values[keys[1]]}-{type_name}",
+                   "structure": values[keys[2]],
+                   "content": values[keys[3]],
+                   "relations":
+                       parse_relations(keys[4:], values)
+                   }
+        elements.append(element)
+
+
+def add_empty_source(knowledge_model):
+    knowledge_model["sources"] = [{
+        "type": "UNKNOWNSOURCE",
+        "id": "Unbekannt-UNKNOWNSOURCE",
+        "name": "",
+        "content": ""
+    }]
+
+
+def save(values: dict[str, str]):
+    knowledge_model = dict()
+    elements = []
+    knowledge_model["knowledge"] = elements
+
+    collect_elements(elements, values)
+    collect_structure(knowledge_model, values)
+    add_empty_source(knowledge_model)
+
+    save_as_file(knowledge_model, values["output-name"])

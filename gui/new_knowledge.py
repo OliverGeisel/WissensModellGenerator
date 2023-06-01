@@ -2,40 +2,18 @@ import re
 
 import PySimpleGUI as gui
 
-from core import save_as_file
-
-
-class IDException(Exception):
-    pass
-
+from core import save, IDException
+from gui.new_structure import create_structure_column_layout, add_structure_element
 
 RELATION_TYPES = ("is-Acronym", "is-Synonym", "has", "is", "part-of", "use", "defines", "contains")
 ELEMENT_TYPES = ("Term", "Definition", "Fact", "Proof", "Exercise", "Example", "Code", "Question", "Answer", "Node")
 
 
-def create_new_relation(number, relation_number) -> list[list[gui.Element]]:
+def create_new_relation(number: int, relation_number: int) -> list[list[gui.Element]]:
     return [[gui.Combo(RELATION_TYPES, "",
                        key=f"element-{number}-relation_type-{relation_number}"),
              gui.Input("", key=f"element-{number}-relation-{relation_number}"),
              gui.DropDown(ELEMENT_TYPES, ELEMENT_TYPES[0], key=f"element-{number}-relation_el_type-{relation_number}")]]
-
-
-def create_new_structure_child(structure_frame: gui.Frame):
-    key = structure_frame.key.removesuffix("-children").removeprefix("structure-")
-    element_num = len(structure_frame.widget.children)
-    new_key = key + f"/{element_num}"
-    frame = gui.Frame("", [[gui.Text("Name:"), gui.Input(key=f"structure-{new_key}-id")],
-                           [gui.Column([[]], key=f"structure-{new_key}-children")],
-                           [gui.Button("Neues Kindelement", key=f"add-{new_key}-child")]],
-                      key=f"structure-{new_key}-structure-frame")
-    back = [[frame]]
-    return back
-
-
-def add_structure_element(event, window):
-    key = event.removeprefix("add-").removesuffix("-child")
-    structure_frame = window.find_element(f"structure-{key}-children")
-    window.extend_layout(structure_frame, create_new_structure_child(structure_frame))
 
 
 def create_knowledge_element(number: int) -> gui.Frame:
@@ -54,15 +32,6 @@ def create_knowledge_element(number: int) -> gui.Frame:
     return gui.Frame("", layout=layout, key=f"Frame-element-{number}")
 
 
-def create_structure_column_layout():
-    back = [[gui.Text("Area of Knowledge: "), gui.Input(key="structure-area-of-knowledge")],
-            [gui.Frame("Area of Knwoledge Kindelemente", [[gui.Column([[]], key="structure-_root-children")]],
-                       key="structure-_root-structure-frame")],
-            [gui.Column([[gui.Button("Neues Kindelement", key="add-_root-child")]])]
-            ]
-    return back
-
-
 def create_knowledge_window() -> gui.Window:
     structure_layout = create_structure_column_layout()
     layout = [[gui.Column([[gui.Frame("Elemente", [[create_knowledge_element(1)]], key="Frame-elements")]]),
@@ -77,73 +46,38 @@ def create_knowledge_window() -> gui.Window:
                       resizable=True, auto_size_text=True)
 
 
-def parse_relations(keys: list, values: dict) -> list:
-    back = []
-    count = 0
-    while count + 2 < len(keys):
-        if "" not in [values[keys[count]], values[keys[count + 1]]]:
-            back.append({"relation_id": values[keys[count + 1]] + "-" + values[keys[count + 2].upper()],
-                         "relation_type": values[keys[count]]})
-        count += 3
-    return back
+def new_knowledge_file(values, window):
+    # answer = gui.popup("Soll die aktuelle datei gespeichert werden?")
+    window.disable()
+    answer, _ = gui.Window('Neues Wissensset?',
+                           [[gui.T('Soll das bestehende Wissen gespeichert werden?')],
+                            [gui.Yes(s=10), gui.No(s=10), gui.Cancel(s=10)]],
+                           disable_close=True).read(close=True)
+    window.enable()
+    window.bring_to_front()
+    if answer == "Yes":
+        save(values)  # can throw IDException
+        window.close()
+        gui.popup_ok("Datei wurde gespeichert!")
+        window = create_knowledge_window()
+        window.finalize()
+    elif answer == "No":
+        window.close()
+        window = create_knowledge_window()
+        window.finalize()
+    return window
 
 
-def parse_structure(id_keys: list, parent: dict, values: dict):
-    for key in id_keys:
-        key_without_suffix = key.removesuffix("-id")
-        if re.match(r"\d+-id", key):
-            new_last_element = {"key": parent["key"] + "/" + key_without_suffix,
-                                "name": values[f"structure-{parent['key']}/{key}"],
-                                "children": list()}
-            parent["children"].append(new_last_element)
-            new_keys = [child_key.removeprefix(key_without_suffix + "/") for child_key in id_keys if
-                        child_key.startswith(key_without_suffix + "/")]
-            parse_structure(new_keys, new_last_element, values)
-
-
-def save(values: dict[str, str]):
-    knowledge_model = dict()
-    elements = []
-    knowledge_model["knowledge"] = elements
-    elem_key = [key for key in values if key.startswith("element")]
-    element_groups = dict()
-    for key in elem_key:
-        number = key.split("-")[1]
-        if number not in element_groups:
-            element_groups[number] = list()
-        element_groups[number].append(key)
-
-    # ------------------- ELEMENTS ---------------------------------------------------------------
-    for group, keys in element_groups.items():
-        if values[keys[1]] == "":
-            gui.popup_error(f"Element {group} hat keine ID. Bitte angeben", title="Fehlende ID")
-            raise IDException
-        type_name = values[keys[0]].upper()
-        element = {"type": type_name,
-                   "id": f"{values[keys[1]]}-{type_name}",
-                   "structure": values[keys[2]],
-                   "content": values[keys[3]],
-                   "relations":
-                       parse_relations(keys[4:], values)
-                   }
-        elements.append(element)
-
-    # ------------------- STRUCTURE ---------------------------------------------------------------
-    structure_keys = [key.removeprefix("structure-") for key in values if key.startswith("structure-")]
-    id_keys = [key.removeprefix("_root/") for key in structure_keys if key.startswith("_root/")]
-    area_of_knowledge = values['structure-area-of-knowledge']
-    structure = {"name": area_of_knowledge, "key": "_root", "children": list()}
-    parse_structure(id_keys, structure, values)
-    knowledge_model["sources"] = list({
-        "type": "UNKNOWNSOURCE",
-        "id": "Unbekannt-UNKNOWNSOURCE",
-        "name": "",
-        "content": ""
-    })
-    knowledge_model["structure"] = structure
-
-    # ------------------- FINISH ------------------------------------------------------------------
-    save_as_file(knowledge_model, values)
+def on_win_closed(values, window):
+    window.disable()
+    answer, _ = gui.Window('Neues Wissensset?',
+                           [[gui.T('Soll das bestehende Wissen gespeichert werden?')],
+                            [gui.Yes(s=10), gui.No(s=10), gui.Cancel(s=10)]],
+                           disable_close=True).read(close=True)
+    if answer == "Yes":
+        save(values)
+        gui.popup_ok("Datei wurde gespeichert!")
+    window.close()
 
 
 def run_new_knowledge(window: gui.Window):
@@ -153,23 +87,12 @@ def run_new_knowledge(window: gui.Window):
         event, values = window.read()
         if event == gui.WINDOW_CLOSED:
             return
-        if event == gui.WIN_X_EVENT:
-            window.disable()
-            answer, _ = gui.Window('Neues Wissensset?', [[gui.T('Soll das bestehende Wissen gespeichert werden?')],
-                                                         [gui.Yes(s=10), gui.No(s=10), gui.Cancel(s=10)]],
-                                   disable_close=True).read(close=True)
-            if answer == "Yes":
-                try:
-                    save(values)
-                except IDException:
-                    window.enable()
-                    continue
-                gui.popup_ok("Datei wurde gespeichert!")
-                window.close()
-                break
-            else:
-                window.close()
-                break
+        elif event == gui.WIN_X_EVENT:
+            try:
+                on_win_closed(values, window)
+            except IDException:
+                continue
+            break
         elif re.match(r"new-relation-\d+", event):
             number = int(event.split('-')[2])
             frame: gui.Frame = window.find_element(f"Frame-{number}-relations")
@@ -188,26 +111,10 @@ def run_new_knowledge(window: gui.Window):
             gui.popup_ok("Datei wurde gespeichert!")
             window.enable()
         elif event == "new-knowledge-set":
-            # answer = gui.popup("Soll die aktuelle datei gespeichert werden?")
-            window.disable()
-            answer, _ = gui.Window('Neues Wissensset?', [[gui.T('Soll das bestehende Wissen gespeichert werden?')],
-                                                         [gui.Yes(s=10), gui.No(s=10), gui.Cancel(s=10)]],
-                                   disable_close=True).read(close=True)
-            window.enable()
-            window.bring_to_front()
-            if answer == "Yes":
-                try:
-                    save(values)
-                except IDException:
-                    continue
-                window.close()
-                gui.popup_ok("Datei wurde gespeichert!")
-                window = create_knowledge_window()
-                window.finalize()
-            elif answer == "No":
-                window.close()
-                window = create_knowledge_window()
-                window.finalize()
+            try:
+                window = new_knowledge_file(values, window)
+            except IDException:
+                continue
         elif re.match(r"add-[/_\w]*-child", event):
             add_structure_element(event, window)
         else:

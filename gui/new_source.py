@@ -4,6 +4,8 @@ from core import save_as_file
 from gui.new_knowledge import IDException
 
 MEDIA_TYPES = ("Internal_Media", "Resolvable_Reference", "Not_Resolvable_Reference", "Unknown_Source")
+
+
 def new_source_element(number: int) -> gui.Frame:
     layout = [
         [gui.Text("TYP:"),
@@ -34,6 +36,11 @@ def create_source_window() -> gui.Window:
 
 def save(values: dict[str, str]):
     knowledge_model = {"knowledge": list(), "structure": dict()}
+    collect_source(knowledge_model, values)
+    save_as_file(knowledge_model, values["output-name"])
+
+
+def collect_source(knowledge_model: dict, values: dict):
     sources = []
     elem_key = [key for key in values if key.startswith("source")]
     source_groups = dict()
@@ -42,7 +49,6 @@ def save(values: dict[str, str]):
         if number not in source_groups:
             source_groups[number] = list()
         source_groups[number].append(key)
-
     for group, keys in source_groups.items():
         if values[keys[1]] == "":
             gui.popup_error(f"Quelle {group} hat keine ID. Bitte angeben", title="Fehlende ID")
@@ -53,7 +59,6 @@ def save(values: dict[str, str]):
                   "content": values[keys[3]]}
         sources.append(source)
     knowledge_model["sources"] = sources
-    save_as_file(knowledge_model, values)
 
 
 def run_new_source(window: gui.Window):
