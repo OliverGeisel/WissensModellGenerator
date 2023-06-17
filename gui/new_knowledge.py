@@ -5,7 +5,7 @@ import PySimpleGUI as gui
 from core import save, IDException
 from gui.new_structure import create_structure_column_layout, add_structure_element
 
-RELATION_TYPES = ("is-Acronym", "is-Synonym", "has", "is", "part-of", "use", "defines", "contains")
+RELATION_TYPES = ("is-Acronym-for", "is-Synonym-for", "has", "is", "part-of", "use", "defines", "contains")
 ELEMENT_TYPES = ("Term", "Definition", "Fact", "Proof", "Exercise", "Example", "Code", "Question", "Answer", "Node")
 
 
