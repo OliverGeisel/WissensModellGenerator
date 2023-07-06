@@ -5,8 +5,10 @@ import PySimpleGUI as gui
 from core import save, IDException
 from gui.new_structure import create_structure_column_layout, add_structure_element
 
-RELATION_TYPES = ("is-Acronym-for", "is-Synonym-for", "has", "is", "part-of", "use", "defines", "contains")
-ELEMENT_TYPES = ("Term", "Definition", "Fact", "Proof", "Exercise", "Example", "Code", "Question", "Answer", "Node")
+RELATION_TYPES = (
+    "is-Acronym-for", "is-Synonym-for", "has", "is", "part-of", "use", "defines", "contains", "proofs", "related")
+ELEMENT_TYPES = (
+    "Term", "Definition", "Fact", "Proof", "Exercise", "Statement", "Example", "Code", "Question", "Answer", "Node")
 
 
 def create_new_relation(number: int, relation_number: int) -> list[list[gui.Element]]:
