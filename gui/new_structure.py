@@ -2,7 +2,7 @@ import re
 
 import PySimpleGUI as gui
 
-from core import save_as_file, add_empty_source, IDException, collect_structure
+from core import save_as_file, add_empty_source, IdException, collect_structure
 
 
 def create_new_structure_child(structure_frame: gui.Frame):
@@ -69,7 +69,7 @@ def run_new_structure(window: gui.Window):
             if answer == "Yes":
                 try:
                     save(values)
-                except IDException:
+                except IdException:
                     window.enable()
                     continue
                 gui.popup_ok("Datei wurde gespeichert!")
@@ -78,7 +78,7 @@ def run_new_structure(window: gui.Window):
         elif event == "save":
             try:
                 save(values)
-            except IDException:
+            except IdException:
                 continue
             window.disable()
             gui.popup_ok("Datei wurde gespeichert!")

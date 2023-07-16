@@ -1,7 +1,7 @@
 import PySimpleGUI as gui
 
 from core import save_as_file
-from gui.new_knowledge import IDException
+from gui.new_knowledge import IdException
 
 MEDIA_TYPES = ("Internal_Media", "Resolvable_Reference", "Not_Resolvable_Reference", "Unknown_Source")
 
@@ -52,7 +52,7 @@ def collect_source(knowledge_model: dict, values: dict):
     for group, keys in source_groups.items():
         if values[keys[1]] == "":
             gui.popup_error(f"Quelle {group} hat keine ID. Bitte angeben", title="Fehlende ID")
-            raise IDException
+            raise IdException
         source = {"type": values[keys[0]].upper(),
                   "id": f"{values[keys[1]]}-{values[keys[0]].upper()}",
                   "name": values[keys[2]],
@@ -77,7 +77,7 @@ def run_new_source(window: gui.Window):
             if answer == "Yes":
                 try:
                     save(values)
-                except IDException:
+                except IdException:
                     window.enable()
                     continue
                 gui.popup_ok("Datei wurde gespeichert!")
@@ -94,7 +94,7 @@ def run_new_source(window: gui.Window):
         elif event == "save":
             try:
                 save(values)
-            except IDException:
+            except IdException:
                 continue
             window.disable()
             gui.popup_ok("Datei wurde gespeichert!")
