@@ -34,11 +34,31 @@ def create_knowledge_element(number: int) -> gui.Frame:
     return gui.Frame("", layout=layout, key=f"Frame-element-{number}")
 
 
+def create_knowledge_element_example(number: int) -> gui.Frame:
+    layout = [
+        [gui.Text("TYP:"), gui.Input("EXAMPLE_OWN", key=f"element-{number}-type", disabled=True, readonly=True)],
+        [gui.Text("Name/ID:", tooltip="Die ID setzt sich aus dem Input und dem Typ zusammen"),
+         gui.Input("", key=f"element-{number}-name", tooltip="Die ID setzt sich aus dem Input und dem Typ zusammen")],
+        [gui.Text("Name/ID-Struktur-Element:", tooltip="Die ID des Strukturelements"),
+         gui.Input("", key=f"element-{number}-structure-name",
+                   tooltip="Die ID des Strukturelements")],
+        [gui.Text("Bildname:"), gui.Input("", key=f"element-{number}-picture", size=(35, 3))],
+        [gui.Text("Titel:"), gui.Input("", key=f"element-{number}-titel", size=(35, 3))],
+        [gui.Text("Dateiendung:"),
+         gui.DropDown(["jpg", "jpeg", "png", "gif", "bmp", "svg"], "png", key=f"element-{number}-end", size=(35, 3))],
+        [gui.Text("Inhalt:"), gui.Multiline("", key=f"element-{number}-content", size=(35, 3))],
+        [gui.Frame("Relations",
+                   create_new_relation(number, 1), key=f"Frame-{number}-relations")],
+        [gui.Button("Weitere Relation", key=f"new-relation-{number}")]]
+    return gui.Frame("", layout=layout, key=f"Frame-element-{number}")
+
+
 def create_knowledge_window() -> gui.Window:
     structure_layout = create_structure_column_layout()
     layout = [[gui.Column([[gui.Frame("Elemente", [[create_knowledge_element(1)]], key="Frame-elements")]]),
                gui.Column([[gui.Frame("Struktur", structure_layout)]])],
-              [gui.Button("Neues Element", key="new-element"), gui.Input("", key="output-name"),
+              [gui.Button("Neues Element", key="new-element"), gui.Button("Neues Beispiel", key="new-example"),
+               gui.Input("", key="output-name"),
                gui.Button("Speichern", key="save"),
                gui.Button("Neuer Wissenssatz", key="new-knowledge-set",
                           tooltip="Neues leeres Fenster, um neuen Wissenssatz zu erstellen.")]]
@@ -104,6 +124,10 @@ def run_new_knowledge(window: gui.Window):
             frame = window.find_element("Frame-elements")
             number = len(frame.widget.children)
             window.extend_layout(frame, [[create_knowledge_element(number + 1)]])
+        elif event == "new-example":
+            frame = window.find_element("Frame-elements")
+            number = len(frame.widget.children)
+            window.extend_layout(frame, [[create_knowledge_element_example(number + 1)]])
         elif event == "save":
             try:
                 save(values)

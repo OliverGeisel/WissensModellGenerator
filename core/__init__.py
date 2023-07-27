@@ -69,6 +69,26 @@ def collect_structure(knowledge_model, values):
     knowledge_model["structure"] = structure
 
 
+def create_example_element(keys, values) -> dict:
+    content = values[keys[6]]
+    if not content.startswith("content:"):
+        content = "content:" + content
+    if content == "":
+        content = "content:;"
+    endung = values[keys[5]]
+    bild = f";image:{values[keys[3]]}.{endung}" if values[keys[3]] != "" else ";image:;"
+    titel = f";title:{values[keys[4]]}" if values[keys[4]] != "" else "title:;"
+    content += bild + titel
+    return {"type": "EXAMPLE",
+            "id": f"{values[keys[1]]}-EXAMPLE",
+            "structure": values[keys[2]],
+            "content": content,
+            "relations":
+                parse_relations(keys[7:], values)
+            }
+    pass
+
+
 def collect_elements(elements, values):
     elem_key = [key for key in values if key.startswith("element")]
     element_groups = dict()
@@ -82,13 +102,16 @@ def collect_elements(elements, values):
             gui.popup_error(f"Element {group} hat keine ID. Bitte angeben", title="Fehlende ID")
             raise IDException
         type_name = values[keys[0]].upper()
-        element = {"type": type_name,
-                   "id": f"{values[keys[1]]}-{type_name}",
-                   "structure": values[keys[2]],
-                   "content": values[keys[3]],
-                   "relations":
-                       parse_relations(keys[4:], values)
-                   }
+        if type_name == "EXAMPLE_OWN":
+            element = create_example_element(keys, values)
+        else:
+            element = {"type": type_name,
+                       "id": f"{values[keys[1]]}-{type_name}",
+                       "structure": values[keys[2]],
+                       "content": values[keys[3]],
+                       "relations":
+                           parse_relations(keys[4:], values)
+                       }
         elements.append(element)
 
 
