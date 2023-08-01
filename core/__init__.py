@@ -90,7 +90,8 @@ def collect_elements(elements, values):
         element = {"type": type_name,
                    "id": f"{values[keys[1]]}-{type_name}",
                    "structure": values[keys[2]],
-                   "content": values[keys[3]],
+                   "content": values[keys[3]] if values[keys[3]] != "" else
+                   (values[keys[1]] if type_name != "Term" else ""),
                    "relations":
                        parse_relations(keys[4:], values)
                    }
@@ -99,8 +100,8 @@ def collect_elements(elements, values):
 
 def add_empty_source(knowledge_model):
     knowledge_model["sources"] = [{
-        "type": "UNKNOWNSOURCE",
-        "id": "Unbekannt-UNKNOWNSOURCE",
+        "type": "UNKNOWN_SOURCE",
+        "id": "Unbekannt-UNKNOWN_SOURCE",
         "name": "",
         "content": ""
     }]
