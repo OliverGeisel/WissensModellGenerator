@@ -5,7 +5,10 @@ import re
 import PySimpleGUI as gui
 
 
-class IDException(Exception):
+class IdException(Exception):
+    """
+    Exception, that the id is not valid
+    """
     pass
 
 
@@ -40,8 +43,10 @@ def parse_relations(keys: list, values: dict) -> list:
     count = 0
     while count + 2 < len(keys):
         if "" not in [values[keys[count]], values[keys[count + 1]]]:
-            back.append({"relation_id": values[keys[count + 1]] + "-" + values[keys[count + 2].upper()],
-                         "relation_type": values[keys[count]]})
+            new_relation = {"relation_id": values[keys[count + 1]] + "-" + values[keys[count + 2]].upper(),
+                            "relation_type": values[keys[count]]
+                            }
+            back.append(new_relation)
         count += 3
     return back
 
@@ -100,25 +105,26 @@ def collect_elements(elements, values):
     for group, keys in element_groups.items():
         if values[keys[1]] == "":
             gui.popup_error(f"Element {group} hat keine ID. Bitte angeben", title="Fehlende ID")
-            raise IDException
+            raise IdException
         type_name = values[keys[0]].upper()
         if type_name == "EXAMPLE_OWN":
             element = create_example_element(keys, values)
         else:
             element = {"type": type_name,
-                       "id": f"{values[keys[1]]}-{type_name}",
-                       "structure": values[keys[2]],
-                       "content": values[keys[3]],
-                       "relations":
-                           parse_relations(keys[4:], values)
-                       }
+                   "id": f"{values[keys[1]]}-{type_name}",
+                   "structure": values[keys[2]],
+                   "content": values[keys[3]] if values[keys[3]] != "" else
+                   (values[keys[1]] if type_name != "Term" else ""),
+                   "relations":
+                       parse_relations(keys[4:], values)
+                   }
         elements.append(element)
 
 
 def add_empty_source(knowledge_model):
     knowledge_model["sources"] = [{
-        "type": "UNKNOWNSOURCE",
-        "id": "Unbekannt-UNKNOWNSOURCE",
+        "type": "UNKNOWN_SOURCE",
+        "id": "Unbekannt-UNKNOWN_SOURCE",
         "name": "",
         "content": ""
     }]

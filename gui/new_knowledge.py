@@ -2,13 +2,15 @@ import re
 
 import PySimpleGUI as gui
 
-from core import save, IDException
+from core import save, IdException
 from gui.new_structure import create_structure_column_layout, add_structure_element
 
 RELATION_TYPES = (
-    "is-Acronym-for", "is-Synonym-for", "has", "is", "part-of", "use", "defines", "contains", "proofs", "related")
+    "is-Acronym-for", "is-Synonym-for", "has", "is", "part-of", "use", "defines", "proofs", "related",
+    "example-for", "describes")
 ELEMENT_TYPES = (
-    "Term", "Definition", "Fact", "Proof", "Exercise", "Statement", "Example", "Code", "Question", "Answer", "Node")
+    "Term", "Definition", "Fact", "Proof", "Exercise", "Statement", "Example", "Code", "Question", "Answer", "Node",
+    "Text")
 
 
 def create_new_relation(number: int, relation_number: int) -> list[list[gui.Element]]:
@@ -78,7 +80,7 @@ def new_knowledge_file(values, window):
     window.enable()
     window.bring_to_front()
     if answer == "Yes":
-        save(values)  # can throw IDException
+        save(values)  # can throw IdException
         window.close()
         gui.popup_ok("Datei wurde gespeichert!")
         window = create_knowledge_window()
@@ -112,7 +114,7 @@ def run_new_knowledge(window: gui.Window):
         elif event == gui.WIN_X_EVENT:
             try:
                 on_win_closed(values, window)
-            except IDException:
+            except IdException:
                 continue
             break
         elif re.match(r"new-relation-\d+", event):
@@ -131,15 +133,18 @@ def run_new_knowledge(window: gui.Window):
         elif event == "save":
             try:
                 save(values)
-            except IDException:
+            except IdException as e:
+                print(e)
                 continue
             window.disable()
             gui.popup_ok("Datei wurde gespeichert!")
             window.enable()
+            # window.bring_to_front()
+            window.force_focus()
         elif event == "new-knowledge-set":
             try:
                 window = new_knowledge_file(values, window)
-            except IDException:
+            except IdException:
                 continue
         elif re.match(r"add-[/_\w]*-child", event):
             add_structure_element(event, window)
